@@ -1,0 +1,27 @@
+{
+  "source": "User-supplied project artwork sheet, 2026-10-23",
+  "source_dimensions": [
+    1536,
+    1024
+  ],
+  "coordinate_convention": "left, top, right-exclusive, bottom-exclusive",
+  "project": {
+    "label": "SakAnalytics",
+    "icon": [
+      33,
+      634,
+      201,
+      802
+    ],
+    "favicon": [
+      209,
+      720,
+      279,
+      790
+    ],
+    "icon_sha256": "ed988df3b9db8fd8d24e76e3bdfc6f3fae4ee4523a9549009731847e75db4472",
+    "icon_rgb_sha256": "815287e26a0353b00f3177fc496330d17821e30127eaa54344c0a2705dfdd2cc",
+    "favicon_sha256": "9492e80041bad443c7689d2846a0820e62e9fe89d7a0bb082f9eaa05b04d7a27",
+    "favicon_rgb_sha256": "2497818ace5d24712a0cb25c7b8ae35b5ac21ba715f1d2c0cc6c988b0ee1a3ff"
+  }
+}
