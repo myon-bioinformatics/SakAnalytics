@@ -28,6 +28,10 @@ def test_all_actions_are_pinned_to_full_shas():
     assert lines
     assert any(line.startswith("uses:") for line in lines)
     for line in lines:
+        if "/.github/workflows/" in line:
+            # 親リポの reusable workflow はリリースタグがないので、40 桁 SHA だけを確認する
+            assert re.search(re.escape(AT) + r"[0-9a-f]{40}\s*$", line), line
+            continue
         match = re.search(re.escape(AT) + r"([0-9a-f]{40})\s+#\s+v\d+\.\d+\.\d+\s*$", line)
         assert match, line
         owner = line.split(AT, 1)[0].split()[-1]
