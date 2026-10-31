@@ -23,19 +23,41 @@ def _uses_lines(text):
     ]
 
 
+PARENT_REUSABLE = re.compile(r"(?:-\s+)?uses:\s+myon-bioinformatics/myon-bioinformatics/\.github/workflows/")
+
+
+def _pin_ok(line):
+    if PARENT_REUSABLE.match(line):
+        # 親リポの reusable workflow はリリースタグがないので、40 桁 SHA だけを確認する
+        return re.search(re.escape(AT) + r"[0-9a-f]{40}\s*$", line) is not None
+    match = re.search(re.escape(AT) + r"([0-9a-f]{40})\s+#\s+v\d+\.\d+\.\d+\s*$", line)
+    if not match:
+        return False
+    owner = line.split(AT, 1)[0].split()[-1]
+    return ACTION_PINS.get(owner) == match.group(1)
+
+
 def test_all_actions_are_pinned_to_full_shas():
     lines = _uses_lines(WORKFLOW.read_text(encoding="utf-8"))
     assert lines
     assert any(line.startswith("uses:") for line in lines)
     for line in lines:
-        if "/.github/workflows/" in line:
-            # 親リポの reusable workflow はリリースタグがないので、40 桁 SHA だけを確認する
-            assert re.search(re.escape(AT) + r"[0-9a-f]{40}\s*$", line), line
-            continue
-        match = re.search(re.escape(AT) + r"([0-9a-f]{40})\s+#\s+v\d+\.\d+\.\d+\s*$", line)
-        assert match, line
-        owner = line.split(AT, 1)[0].split()[-1]
-        assert match.group(1) == ACTION_PINS[owner], line
+        assert _pin_ok(line), line
+
+
+def test_parent_reusable_workflow_passes_on_sha_alone():
+    sha = "9e3da7ae1846e9604ebc24bb5178f7de094a4e77"
+    line = "uses: myon-bioinformatics/myon-bioinformatics/.github/workflows/x.yml" + AT + sha
+    assert _pin_ok(line)
+
+
+def test_other_repo_reusable_workflow_needs_more_than_sha():
+    sha = "9e3da7ae1846e9604ebc24bb5178f7de094a4e77"
+    for line in (
+        "uses: other-org/other-repo/.github/workflows/x.yml" + AT + sha,
+        "uses: myon-bioinformatics/Aoi/.github/workflows/x.yml" + AT + sha,
+    ):
+        assert not _pin_ok(line), line
 
 
 def test_vendor_dispatch_verifies_the_lock_without_record():
