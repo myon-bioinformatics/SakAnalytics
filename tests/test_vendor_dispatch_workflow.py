@@ -10,6 +10,8 @@ SETUP_PINS = {
     "actions/setup-node": "949feb2413d6458794dcd2491c4babbbce0c15c1",
     "actions/setup-python": "6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
     "astral-sh/setup-uv": "68559e99cc807c1eb7e9238fd43a15bba460eec2",
+    "actions/checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "actions/upload-artifact": "cf430e030ddbb5b0abf93d22962f4752f3646cd9",
 }
 
 
@@ -17,19 +19,14 @@ def _uses_lines(text):
     return [line.strip() for line in text.splitlines() if line.strip().startswith("- uses:")]
 
 
-def test_setup_actions_are_pinned_to_full_shas_and_other_actions_use_major_tags():
+def test_all_actions_are_pinned_to_full_shas():
     lines = _uses_lines(WORKFLOW.read_text(encoding="utf-8"))
     assert lines
     for line in lines:
-        if "actions/setup-" in line or "astral-sh/setup-" in line:
-            match = re.search(re.escape(AT) + r"([0-9a-f]{40})\s+#\s+v\d+\.\d+\.\d+\s*$", line)
-            assert match, line
-            owner = line.split(AT, 1)[0].split()[-1]
-            assert match.group(1) == SETUP_PINS[owner], line
-        elif line.split(AT, 1)[0].strip().endswith("actions/checkout") or line.split()[-1].startswith("actions/"):
-            assert re.search(re.escape(AT) + r"v\d+\s*$", line), line
-        else:
-            raise AssertionError(line)
+        match = re.search(re.escape(AT) + r"([0-9a-f]{40})\s+#\s+v\d+\.\d+\.\d+\s*$", line)
+        assert match, line
+        owner = line.split(AT, 1)[0].split()[-1]
+        assert match.group(1) == SETUP_PINS[owner], line
 
 
 def test_vendor_dispatch_verifies_the_lock_without_record():
