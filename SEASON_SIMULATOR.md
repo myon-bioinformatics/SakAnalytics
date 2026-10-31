@@ -9,12 +9,12 @@ Python 3.11–3.14. Probability calculation alone runs on the standard library.
 Mathematical clinch determination uses OR-Tools.
 
 ```sh
-python -m pip install -r sakanalytics/season-requirements.txt
-python -m pip install "pytest>=9.1.1"
+uv pip install -r sakanalytics/season-requirements.txt
+uv pip install "pytest>=9.1.1"
 python sakanalytics/season_simulator.py sakanalytics/season-example.json \
   --as-of 2022-01-01 --through 2022-01-04 --trials 10000 --seed 42 \
   --exact --output /tmp/season-forecast.json
-PYTHONPATH=sakanalytics python -m pytest sakanalytics/tests/test_season_simulator.py -q
+PYTHONPATH=sakanalytics uv run pytest sakanalytics/tests/test_season_simulator.py -q
 ```
 
 The example is entirely fictional. A's magic number changes 2 → out → 1 → 0.
