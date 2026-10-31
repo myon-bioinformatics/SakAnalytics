@@ -76,3 +76,8 @@ def test_vendor_dispatch_verifies_the_lock_without_record():
         assert "--record" not in line
         assert "-S" not in line
     assert (ROOT / "vendor.lock.json").is_file()
+
+
+def test_action_with_sha_but_no_version_comment_fails():
+    line = "uses: actions/checkout" + AT + ACTION_PINS["actions/checkout"]
+    assert not _pin_ok(line), line
