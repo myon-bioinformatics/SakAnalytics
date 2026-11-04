@@ -23,3 +23,13 @@ Input construction excluded. Raw evidence is in neighbor-retention-measurement.j
 The small timing regression and single memory sample do not establish a general
 speedup; this is a modest temporary-memory improvement. No build-time or CI
 improvement is claimed. Full integration tests remain in CI.
+
+## Optimized Python guard
+
+Benchmark parity checks use explicit conditions and `SystemExit`, so they remain
+active under `python -O`. A subprocess regression test injects incorrect results
+and verifies a nonzero exit with a mismatch diagnostic and no success JSON:
+
+```sh
+python -S -m unittest discover -s tests -p test_benchmark_optimization_guard.py -v
+```

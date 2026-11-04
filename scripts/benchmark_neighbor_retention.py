@@ -26,17 +26,20 @@ def main():
             start=time.perf_counter_ns()
             result=funcs[k](rows)
             elapsed=time.perf_counter_ns()-start
-            assert result==expected
+            if result != expected:
+                raise SystemExit(f"report mismatch: {k}")
             if repeat: samples[k].append(elapsed)
     peaks={}
     for k,fn in funcs.items():
         tracemalloc.start()
-        assert fn(rows)==expected
+        if fn(rows) != expected:
+            raise SystemExit(f"report mismatch during memory measurement: {k}")
         peaks[k]=tracemalloc.get_traced_memory()[1]
         tracemalloc.stop()
     for size in range(30):
         subset=rows[:size]
-        assert neighbors.discover(subset)==old.discover(subset)
+        if neighbors.discover(subset) != old.discover(subset):
+            raise SystemExit(f"subset report mismatch: size={size}")
     print(json.dumps({'baseline_sha':sha,'seed':20261104,'python':sys.version,
         'rows':len(rows),'samples_ns':samples,'median_ns':{k:statistics.median(v) for k,v in samples.items()},
         'one_run_peak_bytes':peaks,'parity':'complete report equality including 30 smaller subsets'},indent=2))
