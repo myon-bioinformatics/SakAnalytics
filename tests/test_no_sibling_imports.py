@@ -19,12 +19,15 @@ AOI_PROVIDED = {"aoi_paths"}
 KNOWN_EXCEPTIONS = {
     # PythDRagoras の propositions。conftest.py が AOI_ROOT から sys.path に入れる（import はしない）
     ("conftest.py", "path:pythdragoras"),
-    ("proposition_seed_audit.py", "import:propositions"),
-    ("synthetic_rule_discovery.py", "import:propositions"),
+    # 親の共通 uv tool ビルダー（Aoi から配布）。"[project.scripts]" の文字列で、Aoi の scripts/ ではない
+    ("vendor/uv_tool_build.py", "path:scripts"),
+    ("tests/test_standalone_boundary.py", "path:scripts"),
+    ("core/proposition_seed_audit.py", "import:propositions"),
+    ("npb/synthetic_rule_discovery.py", "import:propositions"),
     # もしもボックスの --readout / readout() は、同じ表を PythDRagoras の評価で読み戻す（任意。遅延 import）
-    ("moshimo_box.py", "import:propositions"),
+    ("npb/moshimo_box.py", "import:propositions"),
     # proposition_seed_audit は親ディレクトリの pythdragoras/ も探す
-    ("proposition_seed_audit.py", "path:pythdragoras"),
+    ("core/proposition_seed_audit.py", "path:pythdragoras"),
 }
 
 
@@ -37,7 +40,7 @@ def _sources():
 
 
 def _local_modules():
-    return {p.stem for p in ROOT.glob("*.py")} | {p.stem for p in (ROOT / "tests").glob("*.py")}
+    return {p.stem for d in (".", "core", "npb", "tests") for p in (ROOT / d).glob("*.py")}
 
 
 def _uses(tree):
