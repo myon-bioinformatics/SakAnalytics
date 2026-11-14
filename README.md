@@ -166,7 +166,7 @@ AOI_ROOT=$PWD/.test-deps/aoi uv run --locked pytest -q --junitxml=reports/junit.
 - The only runtime dependency is polars. ortools is optional; exact solving runs only when `season-requirements.txt` is installed, and otherwise those tests are skipped.
 - In addition, tests use Aoi at `AOI_ROOT`.
   - Cycle data in `cycles/`.
-  - PythDRagoras's `propositions`: `core/proposition_seed_audit.py` and `npb/synthetic_rule_discovery.py` (`pythdragoras` is put on the path by `conftest.py`, not by `PYTHONPATH`).
+  - PythDRagoras's `propositions`: `core/proposition_seed_audit.py` and `npb/synthetic_rule_discovery.py` (its directory comes from Aoi's `aoi.py`: `conftest.py` appends `aoi.environment()`'s import paths after this repository; SakAnalytics names no sibling directory).
   - `tests/test_no_sibling_imports.py` confirms that no other Aoi sibling subprojects or `scripts/` are used (`propositions` is the known exception).
 
 CI (`.github/workflows/ci.yml`) does the same on Python 3.11–3.15. The default ref is `refs/heads/main`, overridable via `aoi_ref` in `workflow_dispatch`. The resolved SHA is left in the job summary. pytest is `uv run pytest`.
@@ -340,9 +340,9 @@ Balanced Accuracy / MCC to every proposition and each evaluated form. Zero denom
 Propositions without synthetic input also have seed evaluation fields, `None` when unevaluated. It is not limited to particular re-evaluation candidates.
 
 ```bash
-python sakanalytics/core/proposition_seed_audit.py --cycle-dir cycles/c001-chunichi
+python aoi.py sakanalytics/core/proposition_seed_audit.py --cycle-dir cycles/c001-chunichi
 # only when also regenerating the annual-stats evidence under the same conditions:
-python sakanalytics/core/proposition_seed_audit.py --cycle-dir cycles/c001-chunichi --generate-plans
+python aoi.py sakanalytics/core/proposition_seed_audit.py --cycle-dir cycles/c001-chunichi --generate-plans
 ```
 
 It uses the existing 3 series of synthetic annual stats, and ability budget seeds 0–9, 2023–2026, all 28 allocations, and decay 0/0.4.
