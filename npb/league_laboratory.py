@@ -5,10 +5,11 @@ coefficients are declared assumptions, not inferred true team abilities.
 """
 from __future__ import annotations
 
-import argparse, gzip, hashlib, io, json, math, random, tomllib
+import argparse, gzip, hashlib, io, json, math, random, sys, tomllib
 from collections import Counter, defaultdict; from copy import deepcopy; from pathlib import Path
 
-import log_scale as scale
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'core'))  # log_scale.py は core/
+import log_scale as scale  # noqa: E402
 import synthetic_league as sl
 
 VIEWS = ("raw", "linear_097", "log1p", "sqrt", "capped4", "relative")

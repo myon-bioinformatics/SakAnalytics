@@ -1,10 +1,15 @@
-"""Unit tests for core/log_scale.py (stdlib only; collected by pytest too)."""
+"""Unit tests for core/log_scale.py (stdlib only; collected by pytest too).
+
+    python3 -S -m unittest tests/test_log_scale.py
+"""
 from __future__ import annotations
 
-import math
-import unittest
+import math, os, subprocess, sys, tempfile, unittest
+from pathlib import Path
 
-import log_scale as scale
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'core'))  # log_scale.py は core/（python -S -m unittest でも読める）
+import log_scale as scale  # noqa: E402
 
 
 # Public portfolio Languages bar example (docs/skills.md): unrounded scores.
@@ -144,6 +149,21 @@ class AdjustNarrowAndLinearTests(unittest.TestCase):
             scale.round_score(1, step=0)
         with self.assertRaises(ValueError):
             scale.round_score(float("nan"))
+
+
+class LeagueLaboratoryStandaloneTests(unittest.TestCase):
+    def test_help_runs_with_isolated_python_and_without_pythonpath(self):
+        env = os.environ.copy()
+        env.pop("PYTHONPATH", None)
+        script = ROOT / "npb" / "league_laboratory.py"
+        with tempfile.TemporaryDirectory() as cwd:
+            result = subprocess.run(
+                [sys.executable, "-S", str(script), "--help"],
+                cwd=cwd, env=env, capture_output=True, text=True,
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("--cycle-dir", result.stdout)
+
 
 
 if __name__ == "__main__":
