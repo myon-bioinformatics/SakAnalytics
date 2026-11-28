@@ -267,12 +267,16 @@ def validate_games(p,games):
 
 
 def experiment(seeds=range(20),mean_runs=4.,leagues=2,conversion=1.):
+    return _experiment(seeds, mean_runs, leagues, conversion, season=None)
+
+
+def _experiment(seeds, mean_runs, leagues, conversion, *, season):
     seeds=list(seeds)
     cases=[]
     for profile in ('aligned','same_totals','reversed'):
         for seed in seeds:
             p=plan(seed=seed,profile=profile,mean_runs=mean_runs,leagues=leagues,conversion=conversion)
-            games=expand(p)
+            games = expand(p) if season is None else _season_witness(p, season)
             # Cross-check only against frozen annual values; do not derive the plan from generated games.
             counts=Counter()
             for r in p['annual']:
@@ -379,13 +383,9 @@ def period_experiment(seeds=range(1), mean_runs=4., leagues=2, conversion=1.):
     for batch_seed in seeds:
         for year in PRIMARY_YEARS:
             seed = batch_seed * 10000 + year
-            annual = experiment([seed], mean_runs, leagues, conversion)
+            annual = _experiment([seed], mean_runs, leagues, conversion, season=year)
             for case in annual['cases']:
                 case.update(season=year, batch_seed=batch_seed)
-                p = plan(seed=seed, profile=case['profile'], mean_runs=mean_runs, leagues=leagues, conversion=conversion)
-                games = _season_witness(p, year)
-                case['annual'] = p['annual']
-                case['games_sha256'] = hashlib.sha256(json.dumps(games, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
                 cases.append(case)
             for control in annual['negative_controls']:
                 control.update(season=year, batch_seed=batch_seed)
