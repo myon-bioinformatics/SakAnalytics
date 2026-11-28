@@ -1,71 +1,18 @@
-import hashlib, json, os, shutil, warnings
+import hashlib, json, os, shutil
 from pathlib import Path
 
 import pytest
 
 import proposition_seed_audit as audit
 
-import aoi_paths
+from sakanalytics_test_evidence import CYCLE, ROOT, aoi_copy, verify_source_sha
 
-ROOT = aoi_paths.resolve_aoi_root(anchor=Path(__file__))
-CYCLE = aoi_paths.resolve_cycle_path(ROOT)
 OUT=CYCLE/'outputs/exploratory/proposition-evaluation'
 
 
-def _source_hash_report_only():
-    """SOURCE_HASH_CHECK=report のときだけ警告で続ける。未設定やそれ以外は失敗する。"""
-    return os.environ.get('SOURCE_HASH_CHECK') == 'report'
-
-
-def _finish_source_hash(problems):
-    if not problems:
-        return
-    text = '\n'.join(problems)
-    if _source_hash_report_only():
-        warnings.warn(text, UserWarning, stacklevel=3)
-        if os.environ.get('GITHUB_ACTIONS') == 'true':
-            print('::warning::' + ' '.join(text.split()))
-        return
-    raise AssertionError(text)
-
-
-def _aoi_copy(rel):
-    """Aoi の中の実体。Aoi が取り込んだ後は sakanalytics/<フォルダ>/、取り込む前は sakanalytics/ 直下。"""
-    moved = ROOT / 'sakanalytics' / rel
-    return moved if moved.is_file() else ROOT / 'sakanalytics' / Path(rel).name
-
-
 def _recorded_source_sha(out, artifact, field, recorded, source):
-    """記録の生成元ハッシュを確かめる。記録は書き換えない（自動で基準を更新しない）。
-
-    今のファイルが記録と同じなら、それで終わり。違うなら、source-divergence.json に
-    その差（記録時のハッシュ → 今のハッシュ、生成物は作り直していない）が書いてあることを求める。
-    pull_request の CI は SOURCE_HASH_CHECK=report を渡し、不一致を警告にする。
-    """
-    current = hashlib.sha256(source.read_bytes()).hexdigest()
-    path = out / 'source-divergence.json'
-    rows = json.loads(path.read_text(encoding='utf-8'))['source_divergence'] if path.exists() else []
-    rel = source.relative_to(ROOT).as_posix()
-    matching = [r for r in rows if r['path'] == rel and r['field'] == field]
-    problems = []
-    if len(matching) > 1:
-        problems.append(f'{rel}: multiple source-divergence rows for {field}')
-    elif current == recorded:
-        if matching:
-            problems.append(f'{rel}: divergence recorded but the file matches the evidence')
-    elif not matching:
-        problems.append(
-            f'{rel}: SHA-256 drift in {artifact} {field}; review provenance, never auto-rebaseline')
-    else:
-        row = matching[0]
-        if row['evidence_sha256'] != recorded or row['current_sha256'] != current:
-            problems.append(f'{rel}: source-divergence row does not match {artifact} {field}')
-        if row['artifacts_regenerated'] is not False or row['inputs_regenerated'] is not False:
-            problems.append(f'{rel}: source-divergence must keep artifacts_regenerated and inputs_regenerated false')
-        reason = row['reason']
-        if not isinstance(reason, str) or not reason.strip():
-            problems.append(f'{rel}: source-divergence reason is empty')
-    _finish_source_hash(problems)
+    verify_source_sha(out, artifact, field, recorded, source,
+                      report_only=os.environ.get('SOURCE_HASH_CHECK') == 'report')
 
 
 def _divergence_row(source, recorded, current):
@@ -83,7 +30,7 @@ def _divergence_row(source, recorded, current):
 
 
 def test_source_hash_check_fails_closed_unless_report(tmp_path, monkeypatch):
-    source = _aoi_copy('core/proposition_seed_audit.py')
+    source = aoi_copy('core/proposition_seed_audit.py')
     recorded = '0' * 64
     monkeypatch.delenv('SOURCE_HASH_CHECK', raising=False)
     with pytest.raises(AssertionError, match='SHA-256 drift'):
@@ -100,7 +47,7 @@ def test_source_hash_check_fails_closed_unless_report(tmp_path, monkeypatch):
 
 
 def test_source_hash_check_accepts_recorded_divergence_and_quiet_match(tmp_path, monkeypatch, recwarn):
-    source = _aoi_copy('core/proposition_seed_audit.py')
+    source = aoi_copy('core/proposition_seed_audit.py')
     current = hashlib.sha256(source.read_bytes()).hexdigest()
     recorded = 'ab' * 32
     explained = tmp_path / 'explained'
@@ -137,11 +84,11 @@ def test_replay_seed_registry_from_all_2240_plans():
     actual=audit.build(CYCLE,OUT/'skill-seed-plans.jsonl.gz')
     saved=json.loads((OUT/'seed-evaluation.json').read_text())
     # 生成元のハッシュは Aoi の source-divergence.json だけが説明する。ローカルな上書きはしない。
-    source = _aoi_copy('core/proposition_seed_audit.py')
+    source = aoi_copy('core/proposition_seed_audit.py')
     _recorded_source_sha(OUT, 'seed-evaluation.json', 'analysis_sha256', saved['analysis_sha256'], source)
     assert actual['analysis_sha256']==hashlib.sha256(source.read_bytes()).hexdigest()
     # The saved run used Aoi's generator. The replay uses the SakAnalytics checkout.
-    archived_generator = _aoi_copy('npb/synthetic_league.py')
+    archived_generator = aoi_copy('npb/synthetic_league.py')
     replay_generator = Path(__file__).resolve().parents[1] / 'npb/synthetic_league.py'
     assert saved['generator_sha256'] == hashlib.sha256(archived_generator.read_bytes()).hexdigest()
     assert actual['generator_sha256'] == hashlib.sha256(replay_generator.read_bytes()).hexdigest()
@@ -229,7 +176,7 @@ def test_annual_row_count_matches_declared_units(annual_input,change):
 
 
 def test_cli_takes_cycle_dir_without_resolving_aoi_paths():
-    text = _aoi_copy('core/proposition_seed_audit.py').read_text(encoding='utf-8')
+    text = aoi_copy('core/proposition_seed_audit.py').read_text(encoding='utf-8')
     assert 'aoi_layout' not in text and 'aoi_paths' not in text
     with pytest.raises(SystemExit) as caught:
         audit.main([])

@@ -1,45 +1,15 @@
 """Model assumptions, conserved game witnesses, frozen evaluation and units."""
-import hashlib, json, math, tomllib
-from copy import deepcopy; from pathlib import Path
+import json, math, tomllib
+from copy import deepcopy
 
 import pytest
 
-import aoi_paths
+from sakanalytics_test_evidence import CYCLE, aoi_copy, verify_source_sha
 import league_laboratory as lab
 import sakanalytics as scale
 import synthetic_league as sl
 
-ROOT = aoi_paths.resolve_aoi_root(anchor=Path(__file__))
-CYCLE = aoi_paths.resolve_cycle_path(ROOT)
 OUT = CYCLE / 'outputs/exploratory/league-laboratory'
-
-
-def _aoi_copy(rel):
-    """Aoi の中の実体。Aoi が取り込んだ後は sakanalytics/<フォルダ>/、取り込む前は sakanalytics/ 直下。"""
-    moved = ROOT / 'sakanalytics' / rel
-    return moved if moved.is_file() else ROOT / 'sakanalytics' / Path(rel).name
-
-
-def _recorded_source_sha(out, artifact, field, recorded, source):
-    """記録の生成元ハッシュを確かめる。記録は書き換えない（自動で基準を更新しない）。
-
-    今のファイルが記録と同じなら、それで終わり。違うなら、source-divergence.json に
-    その差（記録時のハッシュ → 今のハッシュ、生成物は作り直していない）が書いてあることを求める。
-    """
-    current = hashlib.sha256(source.read_bytes()).hexdigest()
-    path = out / 'source-divergence.json'
-    rows = json.loads(path.read_text(encoding='utf-8'))['source_divergence'] if path.exists() else []
-    rel = source.relative_to(ROOT).as_posix()
-    matching = [r for r in rows if r['path'] == rel and r['field'] == field]
-    assert len(matching) <= 1
-    if current == recorded:
-        assert not matching, f'{rel}: divergence recorded but the file matches the evidence'
-        return
-    assert matching, f'{rel}: SHA-256 drift in {artifact} {field}; review provenance, never auto-rebaseline'
-    row = matching[0]
-    assert row['evidence_sha256'] == recorded and row['current_sha256'] == current
-    assert row['artifacts_regenerated'] is False and row['inputs_regenerated'] is False
-    assert isinstance(row['reason'], str) and row['reason'].strip()
 
 
 @pytest.fixture
@@ -314,9 +284,9 @@ def test_saved_evidence_replays_and_contains_passes_and_nonpasses(cfg, props):
     assert report['reference_definitions_sha256'] == lab.digest(props)
     assert report['inputs']['propositions_sha256'] == lab.file_sha(CYCLE / 'propositions.toml')
     assert report['inputs']['settings_sha256'] == lab.file_sha(CYCLE / 'league-laboratory.toml')
-    _recorded_source_sha(OUT, 'results.json', 'inputs.analysis_sha256', report['inputs']['analysis_sha256'],
-                         _aoi_copy('npb/league_laboratory.py'))
-    assert report['inputs']['generator_sha256'] == lab.file_sha(_aoi_copy('npb/synthetic_league.py'))
+    verify_source_sha(OUT, 'results.json', 'inputs.analysis_sha256', report['inputs']['analysis_sha256'],
+                         aoi_copy('npb/league_laboratory.py'))
+    assert report['inputs']['generator_sha256'] == lab.file_sha(aoi_copy('npb/synthetic_league.py'))
     for info in report['artifacts'].values():
         assert lab.file_sha(OUT / info['path']) == info['sha256']
         assert len(lab.read_jsonl(OUT / info['path'])) == info['rows']
