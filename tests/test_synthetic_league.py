@@ -16,7 +16,9 @@ def load_vendored(name, relpath):
 
 _cli_args = load_vendored("sakanalytics_cli_args", "vendor/cli_args.py")
 run_cli = _cli_args.run_cli
-from synthetic_league import (InfeasibleScenario,expand,experiment,plan,validate_games,validate_plan,period_experiment,validate_period,calibration_mean,_flow)
+from synthetic_league import (InfeasibleScenario,expand,experiment,plan,validate_games,validate_plan,validate_period,calibration_mean,_flow)
+
+
 @pytest.mark.parametrize('profile',['aligned','same_totals','reversed'])
 @pytest.mark.parametrize('leagues',[1,2])
 def test_annual_first_then_games_exactly_match_every_team_stat(profile,leagues):
@@ -128,11 +130,6 @@ def test_cli_without_site_packages(tmp_path):
         p=json.loads(path.read_text())
         games=[json.loads(line) for line in path.with_name(path.name.replace('.annual.json','.games.jsonl')).read_text().splitlines()]
         assert validate_games(p,games)
-
-
-@pytest.fixture(scope='module')
-def primary_period():
-    return period_experiment()
 
 
 def test_complete_14_year_period_is_the_acceptance_unit(primary_period):
