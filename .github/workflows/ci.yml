@@ -14,20 +14,22 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  changes:
-    permissions:
-      contents: read
-    uses: myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-change-detection.yml@main
-
   resolve-vendor:
-    needs: changes
-    if: needs.changes.outputs.product_changed == 'true' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
+      product_changed: ${{ steps.paths.outputs.product_changed }}
+      workflow_changed: ${{ steps.paths.outputs.workflow_changed }}
       sha: ${{ steps.aoi.outputs.sha }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: paths
+        uses: myon-bioinformatics/myon-bioinformatics/.github/actions/classify-changes@main
       - name: Resolve Aoi commit
+        if: steps.paths.outputs.product_changed == 'true' || github.event_name == 'schedule'
         id: aoi
         env:
           AOI_URL: https://github.com/myon-bioinformatics/Aoi
@@ -80,8 +82,8 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   test:
-    if: needs.changes.outputs.product_changed == 'true' || github.event_name == 'schedule'
-    needs: [changes, resolve-vendor]
+    if: needs.resolve-vendor.outputs.product_changed == 'true' || github.event_name == 'schedule'
+    needs: resolve-vendor
     name: pytest (Python ${{ matrix.python }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -128,8 +130,8 @@ jobs:
           retention-days: 14
 
   failure-identity:
-    needs: [changes, test]
-    if: always() && (needs.changes.outputs.product_changed == 'true' || github.event_name == 'schedule')
+    needs: [resolve-vendor, test]
+    if: always() && (needs.resolve-vendor.outputs.product_changed == 'true' || github.event_name == 'schedule')
     permissions:
       contents: read
       actions: read
@@ -141,8 +143,8 @@ jobs:
       commit-sha: ${{ github.event.pull_request.head.sha || github.sha }}
 
   actionlint:
-    needs: changes
-    if: needs.changes.outputs.workflow_changed == 'true'
+    needs: resolve-vendor
+    if: ${{ !cancelled() && (needs.resolve-vendor.outputs.workflow_changed == 'true') }}
     permissions:
       contents: read
     uses: myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-actionlint.yml@main
@@ -152,8 +154,8 @@ jobs:
   # pilot/vendor_dispatch.py は vendor.lock.json を検証する。記録フラグは付けない。
   vendor-dispatch:
     name: Vendor dispatch
-    needs: changes
-    if: needs.changes.outputs.product_changed == 'true' || needs.changes.outputs.workflow_changed == 'true' || github.event_name == 'schedule'
+    needs: resolve-vendor
+    if: ${{ !cancelled() && (needs.resolve-vendor.outputs.product_changed == 'true' || needs.resolve-vendor.outputs.workflow_changed == 'true' || github.event_name == 'schedule') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
