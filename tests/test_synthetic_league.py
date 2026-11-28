@@ -9,7 +9,7 @@ if _cli_spec.name not in _sys.modules:
     _sys.modules[_cli_spec.name] = _cli_args
     _cli_spec.loader.exec_module(_cli_args)
 run_cli = _cli_args.run_cli
-from synthetic_league import (InfeasibleScenario,expand,experiment,plan,validate_games,validate_plan,period_experiment,validate_period,calibration_mean,_flow)
+from synthetic_league import (InfeasibleScenario,expand,experiment,plan,validate_games,validate_plan,validate_period,calibration_mean,_flow)
 
 
 @pytest.mark.parametrize('profile',['aligned','same_totals','reversed'])
@@ -123,11 +123,6 @@ def test_cli_without_site_packages(tmp_path):
         p=json.loads(path.read_text())
         games=[json.loads(line) for line in path.with_name(path.name.replace('.annual.json','.games.jsonl')).read_text().splitlines()]
         assert validate_games(p,games)
-
-
-@pytest.fixture(scope='module')
-def primary_period():
-    return period_experiment()
 
 
 def test_complete_14_year_period_is_the_acceptance_unit(primary_period):

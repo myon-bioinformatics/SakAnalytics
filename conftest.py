@@ -60,3 +60,11 @@ def pytest_report_header(config):
 @pytest.fixture(scope="session")
 def aoi_root() -> Path:
     return _root()
+
+
+@pytest.fixture(scope="session")
+def primary_period():
+    """Shared 14-year input. Tests that corrupt a witness work on a deep copy."""
+    from synthetic_league import period_experiment
+
+    return period_experiment()

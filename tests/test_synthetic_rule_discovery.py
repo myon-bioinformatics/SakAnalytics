@@ -4,7 +4,6 @@ from copy import deepcopy
 import pytest
 
 from synthetic_rule_discovery import characterize, discover, features, predictions, score
-from synthetic_league import period_experiment
 
 
 def test_confusion_counts_and_counterexample_identity():
@@ -27,14 +26,13 @@ def test_discovery_refuses_holdout_or_incomplete_training():
         discover([dict(batch_seed=1,profile='reversed')],{})
 
 
-def test_witness_tampering_refused_before_measurement():
+def test_witness_tampering_refused_before_measurement(primary_period):
     # The first case fails before the relatively expensive distribution step.
-    source=period_experiment()
-    broken=deepcopy(source)
+    broken=deepcopy(primary_period)
     broken['cases'][0]['games_sha256']='0'*64
     with pytest.raises(ValueError,match='witness'):
         features(broken)
-    broken=deepcopy(source)
+    broken=deepcopy(primary_period)
     broken['cases'][0]['annual'][0]['W']+=1
     with pytest.raises(ValueError,match='witness'):
         features(broken)
