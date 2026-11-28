@@ -140,7 +140,15 @@ def test_replay_seed_registry_from_all_2240_plans():
     source = _aoi_copy('core/proposition_seed_audit.py')
     _recorded_source_sha(OUT, 'seed-evaluation.json', 'analysis_sha256', saved['analysis_sha256'], source)
     assert actual['analysis_sha256']==hashlib.sha256(source.read_bytes()).hexdigest()
-    assert {**actual, 'analysis_sha256': saved['analysis_sha256']}==saved
+    # The saved run used Aoi's generator. The replay uses the SakAnalytics checkout.
+    archived_generator = _aoi_copy('npb/synthetic_league.py')
+    replay_generator = Path(__file__).resolve().parents[1] / 'npb/synthetic_league.py'
+    assert saved['generator_sha256'] == hashlib.sha256(archived_generator.read_bytes()).hexdigest()
+    assert actual['generator_sha256'] == hashlib.sha256(replay_generator.read_bytes()).hexdigest()
+    provenance = {'analysis_sha256', 'generator_sha256'}
+    assert {k: v for k, v in actual.items() if k not in provenance} == {
+        k: v for k, v in saved.items() if k not in provenance
+    }
     assert actual['plan_count']==2240 and len(actual['propositions'])==114
     assert sum(v['groups'] is not None for v in actual['propositions'].values())==13
     for item in actual['propositions'].values():
